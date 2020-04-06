@@ -16,72 +16,173 @@ namespace WindowsFormsApp1
     {
         static string connString = "server=localhost;port=3306;username=root;password=1234;database=db";
         MySqlConnection connection = new MySqlConnection(connString);
-        List<TextBox> textBoxList = new List<TextBox>();
-        List<TextBox> textBoxListPanelRight = new List<TextBox>();
+        List<TextBox> textBoxList1 = new List<TextBox>();
+        List<ListBox> listBoxList = new List<ListBox>();
+        List<GroupBox> groupBoxList = new List<GroupBox>();
+        //GroupBox groupBox = new GroupBox();
         List<SelectedProfile> selectedProfiles = new List<SelectedProfile>();
         
         public BD()
         {
             InitializeComponent();
-            textBoxList.Add(directMan);
-            textBoxList.Add(directLaw);
-            textBoxList.Add(directInfoTech);
             connection.Open();
-
-            directLaw.Enabled = true;
-            directInfoTech.Enabled = true;
-
             DirectionRepository direction_repository = new DirectionRepository(connection);
-
-            List<Direction> directions = direction_repository.GetAll();
-
-            directMan.Text += directions[0].Name;
-            directLaw.Text += directions[1].Name;
-            directInfoTech.Text += directions[2].Name;
-            
             ProfileRepository profile_repository = new ProfileRepository(connection);
-
+            List<Direction> directions = direction_repository.GetAll();
             List<Profile> profiles = profile_repository.GetAll();
-            List<Profile> profilesMan = profile_repository.GetProfilesManagement();
-            List<Profile> profilesLaw = profile_repository.GetProfilesLaw();
-            List<Profile> profilesInfoTech = profile_repository.GetProfilesInfoTech();
-            int j = 0;
-            while (j < profilesMan.Count)
+            Dictionary<int, Direction> directionsById = new Dictionary<int, Direction>();
+
+
+            Dictionary<int, List<Profile>> profilesByDirectionId = new Dictionary<int, List<Profile>>();
+            foreach (Profile profile in profiles)
             {
-                profileMan.Text += profilesMan[j].Name + '\r' + '\n';
-                facultyMan.Text += profilesMan[j].Faculty + '\r' + '\n';
-                j++;
-                profileMan2.Text += profilesMan[j].Name + '\r' + '\n';
-                facultyMan.Text += profilesMan[j].Faculty + '\r' + '\n';
-                j++;
+                List<Profile> directionProfiles;
+                if (!profilesByDirectionId.TryGetValue(profile.Direction_id, out directionProfiles))
+                {
+                    directionProfiles = new List<Profile>();
+                    profilesByDirectionId.Add(profile.Direction_id, directionProfiles);
+                    
+                }
+                directionProfiles.Add(profile);
             }
-            j = 0;
-            while (j < profilesLaw.Count)
+
+
+            List<int> ids = profile_repository.GetId();
+            int i = 0;
+            int[] a = new int[ids.Count()];
+            while (i < ids.Count())
             {
-                profileLaw.Text += profilesLaw[j].Name + '\r' + '\n';
-                facultyLaw.Text += profilesLaw[j].Faculty + '\r' + '\n';
-                j++;
+                a[i] = ids[i];
+                i++;
             }
-            j = 0;
-            while (j < profilesInfoTech.Count)
+            Console.WriteLine(a[0]);
+
+
+            foreach (Direction direction in directions)
             {
-                profileInfoTech.Text += profilesInfoTech[j].Name + '\r' + '\n';
-                facultyinfoTech.Text += profilesInfoTech[j].Faculty + '\r' + '\n';
-                j++;
-                profileInfoTech2.Text += profilesInfoTech[j].Name + '\r' + '\n' + '\n';
-                facultyinfoTech.Text += profilesInfoTech[j].Faculty + '\r' + '\n';
-                j++;
-                profileInfoTech3.Text += profilesInfoTech[j].Name + '\r' + '\n';
-                facultyinfoTech.Text += profilesInfoTech[j].Faculty + '\r' + '\n';
-                j++;
+                directionsById.Add(direction.Id, direction);
             }
+
+            foreach (var direction in directions)
+            {
+                var directionProfiles = profilesByDirectionId[direction.Id];
+                var textBox = new TextBox();
+                var listBox = new ListBox();
+                var groupBox = new GroupBox();
+                var btnUp = new Button();
+                var btnDown = new Button();
+                groupBox.AutoSize = true;
+                groupBox.Text = "Направление";
+                btnUp.Location = new Point(15, 65);
+                btnDown.Location = new Point(15, 90);
+                textBox.Location = new Point(5, 15);
+                listBox.Location = new Point(35, 65);
+                listBox.SelectedIndexChanged += (s, e) =>
+                {
+                    //MessageBox.Show(listBox.SelectedIndex.ToString());
+                };
+                textBox.Text += direction.Name + '\r' + '\n';
+                btnUp.BackgroundImage = Image.FromFile(@"C:\Users\Andrey\source\repos\BD_test\WindowsFormsApp1\images\arrow_up.ico");
+                btnUp.BackgroundImageLayout = ImageLayout.Stretch;
+                btnDown.BackgroundImage = Image.FromFile(@"C:\Users\Andrey\source\repos\BD_test\WindowsFormsApp1\images\arrow_down.ico");
+                btnDown.BackgroundImageLayout = ImageLayout.Stretch;
+                foreach (var profile in directionProfiles)
+                {
+                    listBox.Items.Add(profile.Direction_id + "\t\t" + profile.Name + "\t\t" + profile.Faculty);
+                }
+                textBox.Size = new Size(391, 50);
+                listBox.Size = new Size(340, 50);
+                btnUp.Size = new Size(17, 17);
+                btnDown.Size = new Size(17, 17);
+                textBox.Multiline = true;
+                textBox.ReadOnly = true;
+                btnUp.Click += (s, e) => {
+                    
+                        object Item = listBox.SelectedItem;
+                        int ItemIndex = listBox.SelectedIndex;
+
+                        if(ItemIndex > 0)
+                        {
+                            listBox.Items.Remove(Item);
+                            listBox.Items.Insert(ItemIndex - 1, Item);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Достигнуто начало списка");
+                        }
+
+                };
+                btnDown.Click += (s, e) => {
+
+                    object Item = listBox.SelectedItem;
+                    int ItemIndex = listBox.SelectedIndex;
+
+                    if (ItemIndex < listBox.Items.Count - 1)
+                    {
+                        listBox.Items.Remove(Item);
+                        listBox.Items.Insert(ItemIndex + 1, Item);
+                    }
+                    else
+                    {
+                        MessageBox.Show("Достигнут конец списка");
+                    }
+
+                };
+                groupBox.Cursor = Cursors.Hand;
+                groupBox.Controls.Add(textBox);
+                groupBox.Controls.Add(listBox);
+                groupBox.Controls.Add(btnUp);
+                groupBox.Controls.Add(btnDown);
+                groupBox.FlatStyle = FlatStyle.Standard;
+                int u = 1;
+                groupBox.Click += (s, e) =>
+                {
+                    while (u < listBox.Items.Count)
+                    {
+                        MySqlCommand command = new MySqlCommand(
+                                                "INSERT INTO cart (user_id, position, prof_id)" +
+                                                " VALUES (1, @p, @j)", connection
+                                                );
+
+                        command.Parameters.Add("@p", MySqlDbType.Int16).Value = u;
+                        command.Parameters.Add("@j", MySqlDbType.Int16).Value = u;
+
+
+                        MySqlDataReader reader = command.ExecuteReader();
+
+                        reader.Close();
+                       // MessageBox.Show(u.ToString());
+                        u++;
+                    }
+                    MessageBox.Show(profiles[u].Direction_id.ToString());
+                    cart.Controls.Add(groupBox);
+                };
+                groupBoxList.Add(groupBox);
+                DirectionsDB.Controls.Add(groupBox);
+            }
+
+            int y = 0;
+            //while (y < groupBoxList.Count)
+            //{
+            //    DirectionsDB.Controls.Add(groupBoxList[y]);
+            //    groupBoxList[y].Click += AddToCart;
+            //    y++;
+            //}
 
         }
 
-        private void test(string a)
-        {
-            MessageBox.Show(a);
-        }
+        //private void AddToCart(object sender, EventArgs e)
+        //{
+        //    GroupBox direction = (GroupBox)sender;
+        //    cart.Controls.Add(direction);
+        //}
+
+        
+
+
+
+
+
 
         private void directMan_Click(object sender, EventArgs e)
         {
@@ -115,10 +216,6 @@ namespace WindowsFormsApp1
 
             fieldDir.Size = new System.Drawing.Size(379, 38);
 
-            panel5.Controls.Add(fieldDir);
-
-            panel5.Controls.Add(listBox1);
-
             fieldDir.Text = directions[0].Name + '\r' + '\n';
 
             listBox1.Items.Add(profiles[0].Name);
@@ -145,9 +242,9 @@ namespace WindowsFormsApp1
 
 
 
-            directMan.ReadOnly = false;
-            fieldDir.Enabled = false;
-            directMan.Enabled = false;
+            //directMan.ReadOnly = false;
+            //fieldDir.Enabled = false;
+            //directMan.Enabled = false;
         }
 
         private void directLaw_Click(object sender, EventArgs e)
@@ -187,22 +284,17 @@ namespace WindowsFormsApp1
 
             fieldDir.Size = new System.Drawing.Size(379, 38);
 
-            panel5.Controls.Add(fieldDir);
-
-            panel5.Controls.Add(listBox1);
-
             fieldDir.Text = directions[1].Name + '\r' + '\n';
 
             listBox1.Items.Add(profiles[0].Name);
 
-            directLaw.ReadOnly = false;
-            fieldDir.Enabled = false;
-            directLaw.Enabled = false;
+            //directLaw.ReadOnly = false;
+            //fieldDir.Enabled = false;
+            //directLaw.Enabled = false;
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
-            panel5.Controls.Clear();
 
             MySqlCommand command = new MySqlCommand("TRUNCATE TABLE cart", connection);
 
@@ -210,13 +302,13 @@ namespace WindowsFormsApp1
 
             reader.Close();
 
-            directMan.ReadOnly = true;
-            directLaw.ReadOnly = true;
-            directInfoTech.ReadOnly = true;
+            //directMan.ReadOnly = true;
+            //directLaw.ReadOnly = true;
+            //directInfoTech.ReadOnly = true;
 
-            directMan.Enabled = true;
-            directLaw.Enabled = true;
-            directInfoTech.Enabled = true;
+            //directMan.Enabled = true;
+            //directLaw.Enabled = true;
+            //directInfoTech.Enabled = true;
 
         }
 
@@ -231,6 +323,10 @@ namespace WindowsFormsApp1
             List<Direction> directions = direction_repository.GetAll();
 
             List<Profile> profiles = profile_repository.GetProfilesInfoTech();
+
+            Button up = new Button();
+            up.Location = new System.Drawing.Point(115, 184);
+            up.Size = new System.Drawing.Size(15, 15);
 
             Point point = new Point(3, 147);
 
@@ -249,10 +345,6 @@ namespace WindowsFormsApp1
             fieldDir.Multiline = true;
 
             fieldDir.Size = new System.Drawing.Size(379, 38);
-
-            panel5.Controls.Add(fieldDir);
-
-            panel5.Controls.Add(listBox1);
 
             fieldDir.Text = directions[2].Name + '\r' + '\n';
 
@@ -279,9 +371,9 @@ namespace WindowsFormsApp1
                 i++;
                 j++;
             }
-            directInfoTech.ReadOnly = false;
-            fieldDir.Enabled = false;
-            directInfoTech.Enabled = false;
+            //directInfoTech.ReadOnly = false;
+            //fieldDir.Enabled = false;
+            //directInfoTech.Enabled = false;
         }
     }
     

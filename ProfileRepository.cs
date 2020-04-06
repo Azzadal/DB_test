@@ -16,10 +16,46 @@ public ProfileRepository(MySqlConnection connection)
             this.connection = connection;
         }
 
+        public List<int> GetId()
+        {
+            MySqlCommand command = new MySqlCommand("SELECT id FROM directions", connection);
+
+            MySqlDataReader reader = command.ExecuteReader();
+
+            List<int> ids = new List<int>();
+
+            while (reader.Read())
+            {
+                ids.Add(reader.GetInt16(0));
+            }
+            reader.Close();
+
+            return ids;
+        }
+
+        static string ConvertIntArrayToStringJoin(int[] array)
+        {
+            string result = string.Join(",", array);
+            return result;
+        }
+
         public List<Profile> GetAll()
         {
 
-            MySqlCommand command = new MySqlCommand("SELECT id, name, faculty, direction_id from profiles where direction_id IN (2, 3, 4)", connection);
+            MySqlCommand command = new MySqlCommand("SELECT id, name, faculty, direction_id from profiles", connection);
+
+            //List<int> ids = GetId();
+            //int i = 0;
+            //int[] a = new int[ids.Count()];
+            //while (i < ids.Count())
+            //{
+            //    a[i] = ids[i];
+            //    i++;
+            //}
+            //string result = ConvertIntArrayToStringJoin(a);
+
+            //command.Parameters.Add("@id", MySqlDbType.VarString).Value = result;
+            //Console.WriteLine(result);
 
             MySqlDataReader reader = command.ExecuteReader();
 
