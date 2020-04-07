@@ -18,9 +18,11 @@ namespace WindowsFormsApp1
         MySqlConnection connection = new MySqlConnection(connString);
         List<TextBox> textBoxList1 = new List<TextBox>();
         List<ListBox> listBoxList = new List<ListBox>();
+        private FlowLayoutPanel DirectionsDB;
+        private FlowLayoutPanel cart;
         List<GroupBox> groupBoxList = new List<GroupBox>();
         //GroupBox groupBox = new GroupBox();
-        List<SelectedProfile> selectedProfiles = new List<SelectedProfile>();
+        //List<SelectedProfile> selectedProfiles = new List<SelectedProfile>();
         
         public BD()
         {
@@ -86,9 +88,11 @@ namespace WindowsFormsApp1
                 btnUp.BackgroundImageLayout = ImageLayout.Stretch;
                 btnDown.BackgroundImage = Image.FromFile(@"C:\Users\Andrey\source\repos\BD_test\WindowsFormsApp1\images\arrow_down.ico");
                 btnDown.BackgroundImageLayout = ImageLayout.Stretch;
+                List<int> p_id = new List<int>();
                 foreach (var profile in directionProfiles)
                 {
                     listBox.Items.Add(profile.Direction_id + "\t\t" + profile.Name + "\t\t" + profile.Faculty);
+                    p_id.Add(profile.Direction_id); 
                 }
                 textBox.Size = new Size(391, 50);
                 listBox.Size = new Size(340, 50);
@@ -145,7 +149,7 @@ namespace WindowsFormsApp1
                                                 );
 
                         command.Parameters.Add("@p", MySqlDbType.Int16).Value = u;
-                        command.Parameters.Add("@j", MySqlDbType.Int16).Value = u;
+                        command.Parameters.Add("@j", MySqlDbType.Int16).Value = p_id[u];
 
 
                         MySqlDataReader reader = command.ExecuteReader();
@@ -374,6 +378,36 @@ namespace WindowsFormsApp1
             //directInfoTech.ReadOnly = false;
             //fieldDir.Enabled = false;
             //directInfoTech.Enabled = false;
+        }
+
+        private void InitializeComponent()
+        {
+            this.DirectionsDB = new System.Windows.Forms.FlowLayoutPanel();
+            this.cart = new System.Windows.Forms.FlowLayoutPanel();
+            this.SuspendLayout();
+            // 
+            // DirectionsDB
+            // 
+            this.DirectionsDB.Location = new System.Drawing.Point(3, 4);
+            this.DirectionsDB.Name = "DirectionsDB";
+            this.DirectionsDB.Size = new System.Drawing.Size(475, 628);
+            this.DirectionsDB.TabIndex = 0;
+            // 
+            // cart
+            // 
+            this.cart.Location = new System.Drawing.Point(484, 4);
+            this.cart.Name = "cart";
+            this.cart.Size = new System.Drawing.Size(475, 628);
+            this.cart.TabIndex = 1;
+            // 
+            // BD
+            // 
+            this.ClientSize = new System.Drawing.Size(960, 644);
+            this.Controls.Add(this.cart);
+            this.Controls.Add(this.DirectionsDB);
+            this.Name = "BD";
+            this.ResumeLayout(false);
+
         }
     }
     
