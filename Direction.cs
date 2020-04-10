@@ -8,32 +8,9 @@ namespace WindowsFormsApp1
 {
     class Direction
     {
-        private int id;
-        private string name;
+        public int Id { get; set; }
 
-        public int Id
-        {
-            get
-            {
-                return id;
-            }
-            set
-            {
-                id = value;
-            }
-        }
+        public string Name { get; set; }
 
-        public string Name
-        {
-            get
-            {
-                return name;
-            }
-            set
-            {
-                name = value;
-            }
-        }
-        
     }
 }

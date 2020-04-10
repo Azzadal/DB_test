@@ -1,4 +1,5 @@
-﻿using MySql.Data.MySqlClient;
+﻿using BD_test;
+using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -6,6 +7,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -15,400 +17,179 @@ namespace WindowsFormsApp1
     public partial class BD : Form
     {
         static string connString = "server=localhost;port=3306;username=root;password=1234;database=db";
+
         MySqlConnection connection = new MySqlConnection(connString);
-        List<TextBox> textBoxList1 = new List<TextBox>();
-        List<ListBox> listBoxList = new List<ListBox>();
-        private FlowLayoutPanel DirectionsDB;
+
+        DirectionRepository direction_repository;
+
+        ProfileRepository profile_repository;
+
+        Dictionary<int, Direction> directionsById;
+
+        Dictionary<int, List<Profile>> profilesByDirectionId;
+
+        private FlowLayoutPanel directionsDB;
+
         private FlowLayoutPanel cart;
-        List<GroupBox> groupBoxList = new List<GroupBox>();
-        //GroupBox groupBox = new GroupBox();
-        //List<SelectedProfile> selectedProfiles = new List<SelectedProfile>();
+
+        private Button saveButton;
+        private Button clearCart;
+
         
+
         public BD()
         {
-            InitializeComponent();
             connection.Open();
-            DirectionRepository direction_repository = new DirectionRepository(connection);
-            ProfileRepository profile_repository = new ProfileRepository(connection);
-            List<Direction> directions = direction_repository.GetAll();
-            List<Profile> profiles = profile_repository.GetAll();
-            Dictionary<int, Direction> directionsById = new Dictionary<int, Direction>();
 
+            direction_repository = new DirectionRepository(connection);
 
-            Dictionary<int, List<Profile>> profilesByDirectionId = new Dictionary<int, List<Profile>>();
-            foreach (Profile profile in profiles)
-            {
-                List<Profile> directionProfiles;
-                if (!profilesByDirectionId.TryGetValue(profile.Direction_id, out directionProfiles))
+            profile_repository = new ProfileRepository(connection);
+
+            InitializeComponent();
+
+            Forma();
+        }
+        public void Forma()
+        {
+                
+
+                List<Direction> directions = direction_repository.GetAll();
+
+                List<Profile> profiles = profile_repository.GetAll();
+
+                directionsById = new Dictionary<int, Direction>();
+
+                profilesByDirectionId = new Dictionary<int, List<Profile>>();
+
+                foreach (Profile profile in profiles)
                 {
-                    directionProfiles = new List<Profile>();
-                    profilesByDirectionId.Add(profile.Direction_id, directionProfiles);
-                    
+                    List<Profile> directionProfiles;
+
+                    if (!profilesByDirectionId.TryGetValue(profile.Direction_id, out directionProfiles))
+                    {
+                        directionProfiles = new List<Profile>();
+
+                        profilesByDirectionId.Add(profile.Direction_id, directionProfiles);
+                    }
+
+                    directionProfiles.Add(profile);
                 }
-                directionProfiles.Add(profile);
-            }
 
-
-            List<int> ids = profile_repository.GetId();
-            int i = 0;
-            int[] a = new int[ids.Count()];
-            while (i < ids.Count())
-            {
-                a[i] = ids[i];
-                i++;
-            }
-            Console.WriteLine(a[0]);
-
-
-            foreach (Direction direction in directions)
-            {
-                directionsById.Add(direction.Id, direction);
-            }
+                foreach (Direction direction in directions)
+                {
+                    directionsById.Add(direction.Id, direction);
+                }
 
             foreach (var direction in directions)
             {
+                HashSet<int> _id = new HashSet<int>();
                 var directionProfiles = profilesByDirectionId[direction.Id];
-                var textBox = new TextBox();
-                var listBox = new ListBox();
-                var groupBox = new GroupBox();
-                var btnUp = new Button();
-                var btnDown = new Button();
-                groupBox.AutoSize = true;
-                groupBox.Text = "Направление";
-                btnUp.Location = new Point(15, 65);
-                btnDown.Location = new Point(15, 90);
-                textBox.Location = new Point(5, 15);
-                listBox.Location = new Point(35, 65);
-                listBox.SelectedIndexChanged += (s, e) =>
-                {
-                    //MessageBox.Show(listBox.SelectedIndex.ToString());
-                };
-                textBox.Text += direction.Name + '\r' + '\n';
-                btnUp.BackgroundImage = Image.FromFile(@"C:\Users\Andrey\source\repos\BD_test\WindowsFormsApp1\images\arrow_up.ico");
-                btnUp.BackgroundImageLayout = ImageLayout.Stretch;
-                btnDown.BackgroundImage = Image.FromFile(@"C:\Users\Andrey\source\repos\BD_test\WindowsFormsApp1\images\arrow_down.ico");
-                btnDown.BackgroundImageLayout = ImageLayout.Stretch;
-                List<int> p_id = new List<int>();
-                foreach (var profile in directionProfiles)
-                {
-                    listBox.Items.Add(profile.Direction_id + "\t\t" + profile.Name + "\t\t" + profile.Faculty);
-                    p_id.Add(profile.Direction_id); 
-                }
-                textBox.Size = new Size(391, 50);
-                listBox.Size = new Size(340, 50);
-                btnUp.Size = new Size(17, 17);
-                btnDown.Size = new Size(17, 17);
-                textBox.Multiline = true;
-                textBox.ReadOnly = true;
-                btnUp.Click += (s, e) => {
-                    
-                        object Item = listBox.SelectedItem;
-                        int ItemIndex = listBox.SelectedIndex;
 
-                        if(ItemIndex > 0)
+                DirectionControl directionControl = new DirectionControl(direction, directionProfiles);
+
+                directionsDB.Controls.Add(directionControl);
+
+                directionControl.BtnUp.Visible = false;
+
+                directionControl.BtnDown.Visible = false;
+
+                directionControl.CloseControl.Visible = false;
+
+                directionControl.Click += (s, e) =>
+                    {
+                        bool isFound = _id.Contains(direction.Id);
+                        if (!isFound)
                         {
-                            listBox.Items.Remove(Item);
-                            listBox.Items.Insert(ItemIndex - 1, Item);
-                        }
-                        else
-                        {
-                            MessageBox.Show("Достигнуто начало списка");
+                            _id.Add(direction.Id);
+                            AddToCart(direction);
+                            saveButton.Enabled = true;
                         }
 
-                };
-                btnDown.Click += (s, e) => {
-
-                    object Item = listBox.SelectedItem;
-                    int ItemIndex = listBox.SelectedIndex;
-
-                    if (ItemIndex < listBox.Items.Count - 1)
-                    {
-                        listBox.Items.Remove(Item);
-                        listBox.Items.Insert(ItemIndex + 1, Item);
-                    }
-                    else
-                    {
-                        MessageBox.Show("Достигнут конец списка");
-                    }
-
-                };
-                groupBox.Cursor = Cursors.Hand;
-                groupBox.Controls.Add(textBox);
-                groupBox.Controls.Add(listBox);
-                groupBox.Controls.Add(btnUp);
-                groupBox.Controls.Add(btnDown);
-                groupBox.FlatStyle = FlatStyle.Standard;
-                int u = 1;
-                groupBox.Click += (s, e) =>
-                {
-                    while (u < listBox.Items.Count)
-                    {
-                        MySqlCommand command = new MySqlCommand(
-                                                "INSERT INTO cart (user_id, position, prof_id)" +
-                                                " VALUES (1, @p, @j)", connection
-                                                );
-
-                        command.Parameters.Add("@p", MySqlDbType.Int16).Value = u;
-                        command.Parameters.Add("@j", MySqlDbType.Int16).Value = p_id[u];
-
-
-                        MySqlDataReader reader = command.ExecuteReader();
-
-                        reader.Close();
-                       // MessageBox.Show(u.ToString());
-                        u++;
-                    }
-                    MessageBox.Show(profiles[u].Direction_id.ToString());
-                    cart.Controls.Add(groupBox);
-                };
-                groupBoxList.Add(groupBox);
-                DirectionsDB.Controls.Add(groupBox);
+                    };
             }
-
-            int y = 0;
-            //while (y < groupBoxList.Count)
-            //{
-            //    DirectionsDB.Controls.Add(groupBoxList[y]);
-            //    groupBoxList[y].Click += AddToCart;
-            //    y++;
-            //}
-
+            clearCart.Click += (s, e) => profile_repository.clearCartbd();
         }
 
-        //private void AddToCart(object sender, EventArgs e)
-        //{
-        //    GroupBox direction = (GroupBox)sender;
-        //    cart.Controls.Add(direction);
-        //}
-
-        
-
-
-
-
-
-
-        private void directMan_Click(object sender, EventArgs e)
+        void AddToCart(Direction direction)
         {
-            ListBox listBox1 = new ListBox();
+            profile_repository.clearCartbd();
 
-            
+            var profiles = profilesByDirectionId[direction.Id];
 
-            DirectionRepository direction_repository = new DirectionRepository(connection);
+            DirectionControl directionControl = new DirectionControl(direction, profiles);
 
-            ProfileRepository profile_repository = new ProfileRepository(connection);
+            cart.Controls.Add(directionControl);
 
-            List<Direction> directions = direction_repository.GetAll();
+            List<int> p_id = directionControl.p_id;
 
-            List<Profile> profiles = profile_repository.GetProfilesManagement();
+            directionControl.Cursor = Cursors.Default;
 
-            Point point = new Point(3, 3);
-
-            listBox1.Size = new System.Drawing.Size(200, 42);
-
-            listBox1.Location = new System.Drawing.Point(130, 40);
-
-            listBox1.MultiColumn = true;
-
-            TextBox fieldDir = new TextBox();
-
-            fieldDir.ReadOnly = true;
-
-            fieldDir.Location = point;
-
-            fieldDir.Multiline = true;
-
-            fieldDir.Size = new System.Drawing.Size(379, 38);
-
-            fieldDir.Text = directions[0].Name + '\r' + '\n';
-
-            listBox1.Items.Add(profiles[0].Name);
-
-            listBox1.Items.Add(profiles[1].Name);
-
-            int profInd = listBox1.Items.Count;
-            int i = 1, j;
-            while (i <= profInd)
+            directionControl.CloseControl.Click += (s, e) =>
             {
-                j = i;
-                MySqlCommand command = new MySqlCommand("INSERT INTO cart (user_id, position, prof_id)" +
-                " VALUES (1, @p, @j)", connection);
+                profile_repository.clearCartbd();
+                cart.Controls.Remove(directionControl);
+                directionControl = null;
+                saveButton.Enabled = true;
+            };
 
-                command.Parameters.Add("@p", MySqlDbType.Int16).Value = i;
-                command.Parameters.Add("@j", MySqlDbType.Int16).Value = j;
-
-
-                MySqlDataReader reader = command.ExecuteReader();
-
-                reader.Close();
-                i++;
-            }
-
-
-
-            //directMan.ReadOnly = false;
-            //fieldDir.Enabled = false;
-            //directMan.Enabled = false;
-        }
-
-        private void directLaw_Click(object sender, EventArgs e)
-        {
-            MySqlCommand command = new MySqlCommand("INSERT INTO cart (user_id, position, prof_id)" +
-                " VALUES (1, 1, 3)", connection);
-
-            MySqlDataReader reader = command.ExecuteReader();
-
-            reader.Close();
-
-            DirectionRepository direction_repository = new DirectionRepository(connection);
-
-            ProfileRepository profile_repository = new ProfileRepository(connection);
-
-            List<Direction> directions = direction_repository.GetAll();
-
-            List<Profile> profiles = profile_repository.GetProfilesLaw();
-
-            Point point = new Point(3, 75);
-
-            ListBox listBox1 = new ListBox();
-
-            listBox1.Size = new System.Drawing.Size(200, 30);
-
-            listBox1.Location = new System.Drawing.Point(130, 112);
-
-            listBox1.MultiColumn = true;
-
-            TextBox fieldDir = new TextBox();
-
-            fieldDir.ReadOnly = true;
-
-            fieldDir.Location = point;
-
-            fieldDir.Multiline = true;
-
-            fieldDir.Size = new System.Drawing.Size(379, 38);
-
-            fieldDir.Text = directions[1].Name + '\r' + '\n';
-
-            listBox1.Items.Add(profiles[0].Name);
-
-            //directLaw.ReadOnly = false;
-            //fieldDir.Enabled = false;
-            //directLaw.Enabled = false;
-        }
-
-        private void button1_Click(object sender, EventArgs e)
-        {
-
-            MySqlCommand command = new MySqlCommand("TRUNCATE TABLE cart", connection);
-
-            MySqlDataReader reader = command.ExecuteReader();
-
-            reader.Close();
-
-            //directMan.ReadOnly = true;
-            //directLaw.ReadOnly = true;
-            //directInfoTech.ReadOnly = true;
-
-            //directMan.Enabled = true;
-            //directLaw.Enabled = true;
-            //directInfoTech.Enabled = true;
-
-        }
-
-        private void directInfoTech_Click(object sender, EventArgs e)
-        {
-            ListBox listBox1 = new ListBox();
-
-            DirectionRepository direction_repository = new DirectionRepository(connection);
-
-            ProfileRepository profile_repository = new ProfileRepository(connection);
-
-            List<Direction> directions = direction_repository.GetAll();
-
-            List<Profile> profiles = profile_repository.GetProfilesInfoTech();
-
-            Button up = new Button();
-            up.Location = new System.Drawing.Point(115, 184);
-            up.Size = new System.Drawing.Size(15, 15);
-
-            Point point = new Point(3, 147);
-
-            listBox1.Size = new System.Drawing.Size(200, 60);
-
-            listBox1.Location = new System.Drawing.Point(130, 184);
-
-            listBox1.MultiColumn = true;
-
-            TextBox fieldDir = new TextBox();
-
-            fieldDir.ReadOnly = true;
-
-            fieldDir.Location = point;
-
-            fieldDir.Multiline = true;
-
-            fieldDir.Size = new System.Drawing.Size(379, 38);
-
-            fieldDir.Text = directions[2].Name + '\r' + '\n';
-
-            listBox1.Items.Add(profiles[0].Name);
-
-            listBox1.Items.Add(profiles[1].Name);
-
-            listBox1.Items.Add(profiles[2].Name);
-
-            int profInd = listBox1.Items.Count;
-            int i = 1, j = 4;
-            while (i <= profInd)
+            saveButton.Click += (s, e) =>
             {
-                MySqlCommand command = new MySqlCommand("INSERT INTO cart (user_id, position, prof_id)" +
-                " VALUES (1, @p, @j)", connection);
-
-                command.Parameters.Add("@p", MySqlDbType.Int16).Value = i;
-                command.Parameters.Add("@j", MySqlDbType.Int16).Value = j;
-
-
-                MySqlDataReader reader = command.ExecuteReader();
-
-                reader.Close();
-                i++;
-                j++;
-            }
-            //directInfoTech.ReadOnly = false;
-            //fieldDir.Enabled = false;
-            //directInfoTech.Enabled = false;
+                profile_repository.Save(directionControl, p_id);
+                saveButton.Enabled = false;
+            };
         }
 
         private void InitializeComponent()
         {
-            this.DirectionsDB = new System.Windows.Forms.FlowLayoutPanel();
+            this.directionsDB = new System.Windows.Forms.FlowLayoutPanel();
             this.cart = new System.Windows.Forms.FlowLayoutPanel();
+            this.clearCart = new System.Windows.Forms.Button();
+            this.saveButton = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
-            // DirectionsDB
+            // directionsDB
             // 
-            this.DirectionsDB.Location = new System.Drawing.Point(3, 4);
-            this.DirectionsDB.Name = "DirectionsDB";
-            this.DirectionsDB.Size = new System.Drawing.Size(475, 628);
-            this.DirectionsDB.TabIndex = 0;
+            this.directionsDB.Location = new System.Drawing.Point(4, 0);
+            this.directionsDB.Name = "directionsDB";
+            this.directionsDB.Size = new System.Drawing.Size(423, 505);
+            this.directionsDB.TabIndex = 0;
             // 
             // cart
             // 
-            this.cart.Location = new System.Drawing.Point(484, 4);
+            this.cart.Location = new System.Drawing.Point(433, 0);
             this.cart.Name = "cart";
-            this.cart.Size = new System.Drawing.Size(475, 628);
+            this.cart.Size = new System.Drawing.Size(413, 505);
             this.cart.TabIndex = 1;
+            // 
+            // clearCart
+            // 
+            this.clearCart.Location = new System.Drawing.Point(322, 474);
+            this.clearCart.Name = "clearCart";
+            this.clearCart.Size = new System.Drawing.Size(105, 49);
+            this.clearCart.TabIndex = 0;
+            this.clearCart.Text = "Очистить";
+            this.clearCart.UseVisualStyleBackColor = true;
+            // 
+            // saveButton
+            // 
+            this.saveButton.Location = new System.Drawing.Point(433, 474);
+            this.saveButton.Name = "saveButton";
+            this.saveButton.Size = new System.Drawing.Size(101, 49);
+            this.saveButton.TabIndex = 0;
+            this.saveButton.Text = "Сохранить";
+            this.saveButton.UseVisualStyleBackColor = true;
             // 
             // BD
             // 
-            this.ClientSize = new System.Drawing.Size(960, 644);
+            this.ClientSize = new System.Drawing.Size(858, 535);
+            this.Controls.Add(this.saveButton);
+            this.Controls.Add(this.clearCart);
             this.Controls.Add(this.cart);
-            this.Controls.Add(this.DirectionsDB);
+            this.Controls.Add(this.directionsDB);
             this.Name = "BD";
             this.ResumeLayout(false);
 
-        }
+        }   
     }
     
 }
